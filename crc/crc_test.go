@@ -113,4 +113,15 @@ func TestAddDoubleCrc32(t *testing.T) {
 	if n != 44 {
 		t.Errorf("wrong datasegment length: %v", n)
 	}
+	
+	m = prepareMem()
+	
+	err = AddDoubleCrc32(m, 0x08005000, 0x08005010, 0xFF)
+	if err == nil {
+		t.Errorf("segment should be overlapped")
+	}
+	err = AddDoubleCrc32(m, 0x08005000, 0x08005004, 0xFF)
+	if err == nil {
+		t.Errorf("segment should be overlapped")
+	}
 }
