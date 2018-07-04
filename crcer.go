@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"github.com/marcinbor85/crcer/crc"
 	"github.com/marcinbor85/gohex"
-	"math/rand"
 	"os"
-	"time"
 )
 
 func exit(msg string) {
@@ -17,12 +14,24 @@ func exit(msg string) {
 }
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano())
-
 	method := flag.Uint("method", 0x00, "crc method")
 	padding := flag.Uint("padding", 0xFF, "padding byte")
+	start := flag.Uint("start", 0x08000000, "start address")
+	end := flag.Uint("end", 0x08040000, "end address")
+
+	startSet := false
+	endSet := false
 
 	flag.Parse()
+
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "end" {
+			endSet = true
+		}
+		if f.Name == "start" {
+			startSet = true
+		}
+	})
 
 	if len(flag.Args()) != 1 {
 		exit("no input filename")
@@ -41,24 +50,29 @@ func main() {
 		exit(err.Error())
 	}
 
-	firstSegment := mem.GetDataSegments()[0]
-	lastSegment := mem.GetDataSegments()[len(mem.GetDataSegments())-1]
-	startAdr := firstSegment.Address
-	endAdr := lastSegment.Address + (uint32)(len(lastSegment.Data))
+	startAdr, endAdr := crc.GetAdressRange(mem)
 
-	data := mem.ToBinary(startAdr, endAdr-startAdr, (byte)(*padding))
+	if startSet != false {
+		startAdr = (uint32)(*start)
+	}
+
+	if endSet != false {
+		endAdr = (uint32)(*end)
+	}
+	
+	if endAdr <= startAdr {
+		exit("end address must be greater than start address")
+	}
+	
+	if endAdr%4 != 0 || startAdr%4 != 0 {
+		exit("addresses should be aligned to 4 bytes")
+	}
 
 	if *method == 0 {
-		a := make([]byte, 4)
-
-		binary.LittleEndian.PutUint32(a, crc.Crc32UpdateBlock(0, data))
-		mem.AddBinary(endAdr, a)
-
-		binary.LittleEndian.PutUint32(a, (uint32)(rand.Intn(0xFFFFFFFF)))
-		mem.AddBinary(endAdr+4, a)
-
-		binary.LittleEndian.PutUint32(a, crc.Crc32UpdateBlock(0, a))
-		mem.AddBinary(endAdr+8, a)
+		err := crc.AddDoubleCrc32(mem, startAdr, endAdr, (byte)(*padding))
+		if err != nil {
+			exit("cannot add crc: " + err.Error())
+		}
 
 		mem.DumpIntelHex(os.Stdout, 16)
 	} else {
