@@ -13,6 +13,21 @@ func GetAdressRange(mem *gohex.Memory) (uint32, uint32) {
 	return firstSegment.Address, lastSegment.Address + (uint32)(len(lastSegment.Data))
 }
 
+func AddSingleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte) error {
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	data := mem.ToBinary(startAdr, endAdr - startAdr, pad)
+	
+	a := make([]byte, 4)
+	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, data))
+	err := mem.AddBinary(endAdr, a)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
+
 func AddDoubleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte) error {
 	rand.Seed(time.Now().UTC().UnixNano())
 
