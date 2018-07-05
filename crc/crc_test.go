@@ -125,3 +125,27 @@ func TestAddDoubleCrc32(t *testing.T) {
 		t.Errorf("segment should be overlapped")
 	}
 }
+
+
+func TestAddSingleCrc32(t *testing.T) {
+	
+	m := prepareMem()
+	
+	err := AddSingleCrc32(m, 0x08005000, 0x0800502C, 0xFF)
+	if err != nil {
+		t.Errorf("error: %v", err)
+	}
+	
+	data := m.ToBinary(0x0800502C, 4, 0xFF)
+	crc1 := data[0:4]
+	
+	if reflect.DeepEqual(crc1, []byte{132, 37, 27, 32}) == false {
+		t.Errorf("wrong data crc sum: %v", crc1)
+	}
+	
+	n := len(m.GetDataSegments()[1].Data)
+	if n != 12 {
+		t.Errorf("wrong datasegment length: %v", n)
+	}
+}
+
