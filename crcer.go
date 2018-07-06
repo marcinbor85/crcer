@@ -16,6 +16,7 @@ func exit(msg string) {
 func main() {
 	method := flag.Uint("method", 0x00, "crc method (default 0 - double, 1 - single)")
 	padding := flag.Uint("padding", 0xFF, "padding byte")
+	poly := flag.Uint("poly", 0x04C11DB7, "polynomial")
 	start := flag.Uint("start", 0x08000000, "start address")
 	end := flag.Uint("end", 0x08040000, "end address")
 
@@ -23,6 +24,9 @@ func main() {
 	endSet := false
 
 	flag.Parse()
+	
+	crcTable := make([]uint32, 256)
+	crc.MakeCrc32Table(crcTable, (uint32)(*poly))
 
 	flag.Visit(func(f *flag.Flag) {
 		if f.Name == "end" {
@@ -69,14 +73,14 @@ func main() {
 	}
 
 	if *method == 0 {
-		err := crc.AddDoubleCrc32(mem, startAdr, endAdr, (byte)(*padding))
+		err := crc.AddDoubleCrc32(mem, startAdr, endAdr, (byte)(*padding), crcTable)
 		if err != nil {
 			exit("cannot add crc: " + err.Error())
 		}
 
 		mem.DumpIntelHex(os.Stdout, 16)
 	} else if *method == 1 {
-		err := crc.AddSingleCrc32(mem, startAdr, endAdr, (byte)(*padding))
+		err := crc.AddSingleCrc32(mem, startAdr, endAdr, (byte)(*padding), crcTable)
 		if err != nil {
 			exit("cannot add crc: " + err.Error())
 		}

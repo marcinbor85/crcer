@@ -21,23 +21,34 @@ func prepareMem() *gohex.Memory {
 func TestCrc32(t *testing.T) {
 	var v uint32
 	
-	v = Crc32Update(0, 0x12345678)
+	crcTable := make([]uint32, 256)
+	MakeCrc32Table(crcTable, 0x04C11DB7)
+	
+	v = Crc32Update(0, 0x12345678, crcTable)
 	if v != 0x188E5750 {
 		t.Errorf("wrong crc checksum: %08X", v)
 	}
 	
-	v = Crc32Update(0xFFFFFFFF, 0x12345678)
+	v = Crc32Update(0xFFFFFFFF, 0x12345678, crcTable)
 	if v != 0xDF8A8A2B  {
 		t.Errorf("wrong crc checksum: %08X", v)
 	}
 	
-	v = Crc32UpdateBlock(0, []byte{0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A})
+	v = Crc32UpdateBlock(0, []byte{0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A}, crcTable)
 	if v != 0x14201842  {
 		t.Errorf("wrong crc checksum: %08X", v)
 	}
 	
-	v = Crc32UpdateBlock(0xFFFFFFFF, []byte{0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A})
+	v = Crc32UpdateBlock(0xFFFFFFFF, []byte{0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A}, crcTable)
 	if v != 0x7D24A31B  {
+		t.Errorf("wrong crc checksum: %08X", v)
+	}
+	
+	crcTable = make([]uint32, 256)
+	MakeCrc32Table(crcTable, 0x11223344)
+	
+	v = Crc32Update(0, 0x12345678, crcTable)
+	if v != 0x73CBA1D4 {
 		t.Errorf("wrong crc checksum: %08X", v)
 	}
 }
@@ -58,7 +69,10 @@ func TestAddDoubleCrc32(t *testing.T) {
 	
 	m := prepareMem()
 	
-	err := AddDoubleCrc32(m, 0x08005000, 0x0800502C, 0xFF)
+	crcTable := make([]uint32, 256)
+	MakeCrc32Table(crcTable, 0x04C11DB7)
+	
+	err := AddDoubleCrc32(m, 0x08005000, 0x0800502C, 0xFF, crcTable)
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
@@ -73,7 +87,7 @@ func TestAddDoubleCrc32(t *testing.T) {
 	}
 	
 	a := make([]byte, 4)
-	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, rand))
+	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, rand, crcTable))
 	if reflect.DeepEqual(a, crc2) == false {
 		t.Errorf("wrong rand crc sum: %v", crc2)
 	}
@@ -85,7 +99,7 @@ func TestAddDoubleCrc32(t *testing.T) {
 	
 	m = prepareMem()
 	
-	err = AddDoubleCrc32(m, 0x08005000, 0x08005018, 0xFF)
+	err = AddDoubleCrc32(m, 0x08005000, 0x08005018, 0xFF, crcTable)
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
@@ -99,7 +113,7 @@ func TestAddDoubleCrc32(t *testing.T) {
 		t.Errorf("wrong data crc sum: %v", crc1)
 	}
 	
-	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, rand))
+	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, rand, crcTable))
 	if reflect.DeepEqual(a, crc2) == false {
 		t.Errorf("wrong rand crc sum: %v", crc2)
 	}
@@ -116,11 +130,11 @@ func TestAddDoubleCrc32(t *testing.T) {
 	
 	m = prepareMem()
 	
-	err = AddDoubleCrc32(m, 0x08005000, 0x08005010, 0xFF)
+	err = AddDoubleCrc32(m, 0x08005000, 0x08005010, 0xFF, crcTable)
 	if err == nil {
 		t.Errorf("segment should be overlapped")
 	}
-	err = AddDoubleCrc32(m, 0x08005000, 0x08005004, 0xFF)
+	err = AddDoubleCrc32(m, 0x08005000, 0x08005004, 0xFF, crcTable)
 	if err == nil {
 		t.Errorf("segment should be overlapped")
 	}
@@ -131,7 +145,10 @@ func TestAddSingleCrc32(t *testing.T) {
 	
 	m := prepareMem()
 	
-	err := AddSingleCrc32(m, 0x08005000, 0x0800502C, 0xFF)
+	crcTable := make([]uint32, 256)
+	MakeCrc32Table(crcTable, 0x04C11DB7)
+	
+	err := AddSingleCrc32(m, 0x08005000, 0x0800502C, 0xFF, crcTable)
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}

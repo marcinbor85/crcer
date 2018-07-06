@@ -13,13 +13,13 @@ func GetAdressRange(mem *gohex.Memory) (uint32, uint32) {
 	return firstSegment.Address, lastSegment.Address + (uint32)(len(lastSegment.Data))
 }
 
-func AddSingleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte) error {
+func AddSingleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte, crcTable []uint32) error {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	data := mem.ToBinary(startAdr, endAdr - startAdr, pad)
 	
 	a := make([]byte, 4)
-	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, data))
+	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, data, crcTable))
 	err := mem.AddBinary(endAdr, a)
 	if err != nil {
 		return err
@@ -28,13 +28,13 @@ func AddSingleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte)
 	return nil
 }
 
-func AddDoubleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte) error {
+func AddDoubleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte, crcTable []uint32) error {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	data := mem.ToBinary(startAdr, endAdr - startAdr, pad)
 	
 	a := make([]byte, 4)
-	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, data))
+	binary.LittleEndian.PutUint32(a, Crc32UpdateBlock(0, data, crcTable))
 	err := mem.AddBinary(endAdr, a)
 	if err != nil {
 		return err
@@ -48,7 +48,7 @@ func AddDoubleCrc32(mem *gohex.Memory, startAdr uint32, endAdr uint32, pad byte)
 	}
 
 	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, Crc32UpdateBlock(0, a))
+	binary.LittleEndian.PutUint32(b, Crc32UpdateBlock(0, a, crcTable))
 	err = mem.AddBinary(endAdr+8, b)
 	if err != nil {
 		return err
